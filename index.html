@@ -5,12 +5,26 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="index.css">
 <!-- https://www.npmjs.com/package/xlsx - https://docs.sheetjs.com/docs/getting-started/installation/standalone/ -->
-<script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-<script src="index.js"></script>
 <body>
-<div id="graph"></div>
+<p>
+    <label for="birthday">Geburtstag</label>
+    <input id="birthday" />
+    <input type="radio" id="m" name="sex" value="m" />
+    <label for="m">m&auml;nnlich</label>
+    <input type="radio" id="w" name="sex" value="w" />
+    <label for="w">weiblich</label>
+    <input type="radio" id="pessimistic" name="optimism" value="pessimistic" />
+    <label for="pessimistic">pessimistisch</label>
+    <input type="radio" id="optimistic" name="optimism" value="optimistic" />
+    <label for="optimistic">optimistisch</label>
+    <button type="button" id="calculate" disabled="disabled">Graph anzeigen</button>
+</p>
+<canvas id="survivalGraph"></canvas>
 <footer>
     <p>Mit <a href="https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Sterbefaelle-Lebenserwartung/Publikationen/Downloads-Sterbefaelle/statistischer-bericht-kohortensterbetafeln-5126101239005.xlsx?__blob=publicationFile">Daten</a> des <a href="https://www.destatis.de">Statistischen Bundesamts</a></p>
 </footer>
 </body>
+<script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="index.js"></script>
 </html>

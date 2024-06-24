@@ -1,28 +1,37 @@
 // serve with `python -m SimpleHTTPServer 8000`
 // http://localhost:8000
 
-function onSpreadsheetDownloaded(response) {
-    const birthDay = new Date("1983-08-24"); // TODO read from input field
+function getFormValues() {
+    console.log(`getting form values`);
+    return {
+        birthDay: new Date(document.getElementById("birthday").value),
+        sex: document.querySelector('input[name="sex"]:checked').value,
+        optimism: document.querySelector('input[name="optimism"]:checked').value,
+    }
+}
+
+function calculate() {
+    console.log(`calculating`);
+    document.getElementById("calculate").setAttribute("disabled", "disabled");
+
+    const formValues = getFormValues();
+    console.log("formValues", formValues);
+    const birthDay = formValues.birthDay;
+    var sheetIndex = 5;
+    if (formValues.sex == "w") sheetIndex += 1;
+    if (formValues.optimism == "optimistic") sheetIndex += 2;
+
     const currentDate = new Date();
-    const currentAgeInYears = new Date(currentDate - birthDay).getFullYear() - 1970;
+    const currentAgeInYears = new Date(currentDate - formValues.birthDay).getFullYear() - 1970;
     const birthYear = birthDay.getFullYear();
 
     if(birthYear < 1923 || birthYear > 2023) {
         throw new Error(`Birth year must be in range [1923, 2023], was ${birthYear}`);
     }
 
-// discover
-//    for(sheetName in workbook.SheetNames) {
-//        console.log(sheetName, typeof sheetName); // should be ["Titel", ...] - but is ["0", ...] !?
-//    }
-
-    console.log(`loading spreadsheet data`)
-    const workbook = XLSX.read(response);
-    console.log("workbook", workbook, typeof workbook);
-
-    console.log("birthDay", birthDay, "birthYear", birthYear, "currentDate", currentDate, "currentAgeInYears", currentAgeInYears)
-
-    const sheet = workbook.Sheets["12621-05"];
+    const sheetName = `12621-0${sheetIndex}`;
+    console.log(`using sheet ${sheetName}`);
+    const sheet = window.workbook.Sheets[sheetName];
 
     const columnIndexForBirthYear1923 = 1
     const rowIndexForCompletedYears0 = 8
@@ -43,7 +52,7 @@ function onSpreadsheetDownloaded(response) {
     console.log("startingCell address", startingCell);
     console.log("startingCell content", sheet[startingCell].v, typeof sheet[startingCell].v);
 
-    const maxRowIndex = rowIndexForCompletedYears0 + 100;
+    const maxRowIndex = rowIndexForCompletedYears0 + 99;
 
     // odds to be alive
     var survivalChance = [];
@@ -51,24 +60,71 @@ function onSpreadsheetDownloaded(response) {
 
     console.log(survivalChance);
     for(var thisRowIndex = startRowIndex + 1; thisRowIndex <= maxRowIndex; thisRowIndex++) {
-        console.log("thisRowIndex", thisRowIndex);
+//        console.log("thisRowIndex", thisRowIndex);
 
         const thisYearsAge = thisRowIndex - rowIndexForCompletedYears0;
-        console.log("thisYearsAge", thisYearsAge);
+//        console.log("thisYearsAge", thisYearsAge);
 
         const lastYearsAge = thisYearsAge - 1;
-        console.log("lastYearsAge", lastYearsAge);
+//        console.log("lastYearsAge", lastYearsAge);
         const lastYearsOdds = survivalChance[lastYearsAge];
-        console.log("lastYearsOdds", lastYearsOdds);
+//        console.log("lastYearsOdds", lastYearsOdds);
 
         const thisCellAddress = XLSX.utils.encode_cell({c: columnIndexForMyBirthYear, r: thisRowIndex});
-        console.log("thisCellAddress", thisCellAddress)
+//        console.log("thisCellAddress", thisCellAddress)
         const thisYearsOdds = lastYearsOdds * (1 - sheet[thisCellAddress].v);
-        console.log("thisYearsOdds", thisYearsOdds)
+//        console.log("thisYearsOdds", thisYearsOdds)
 
         survivalChance[thisYearsAge] = thisYearsOdds;
     }
-    console.log(survivalChance);
+
+    createSurvivalGraph(survivalChance);
+    document.getElementById("calculate").removeAttribute("disabled");
+}
+
+function onSpreadsheetDownloaded(response) {
+    console.log(`loading spreadsheet data`);
+    window.workbook = XLSX.read(response);
+
+    document.getElementById("calculate").removeAttribute("disabled");
+}
+
+function createSurvivalGraph(survivalChance) {
+    console.log(`creating survival graph`);
+    const ctx = document.getElementById('survivalGraph');
+
+    const labels = [];
+    const data = [];
+
+    survivalChance.forEach(function(e, i) {
+        labels.push(i);
+        data.push(e * 100);
+    });
+
+    console.log("survivalChance", survivalChance);
+    console.log("labels", labels);
+    console.log("data", data);
+
+    if(window.chart) window.chart.destroy();
+    window.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Chance of survival in %',
+            data: data,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+    });
+
 }
 
 function downloadSpreadsheet() {
@@ -87,4 +143,5 @@ function downloadSpreadsheet() {
     req.send();
 }
 
+document.getElementById("calculate").addEventListener("click", function() {calculate()});
 downloadSpreadsheet();

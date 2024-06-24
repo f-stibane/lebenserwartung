@@ -128,9 +128,8 @@ function createSurvivalGraph(survivalChance) {
 }
 
 function downloadSpreadsheet() {
-    // TODO: download from source page; or compress by deleting sheets that are not needed
     const url = "statistischer-bericht-kohortensterbetafeln-5126101239005.xlsx";
-    console.log(`downloading ${url}`)
+    console.log(`loading ${url}`)
 
     const req = new XMLHttpRequest();
     req.open("GET", url, true);

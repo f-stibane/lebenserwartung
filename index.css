@@ -5,9 +5,8 @@
 
 footer {
   text-align: center;
-  background-color: DarkSalmon;
-  color: white;
 
+  border-top: 1px solid black;
   position:absolute;
   bottom:0;
   padding: 3px;

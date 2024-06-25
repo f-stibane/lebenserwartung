@@ -50,13 +50,18 @@ function calculate() {
 
     const startingCell = XLSX.utils.encode_cell({c: columnIndexForMyBirthYear, r: startRowIndex});
     console.log("startingCell address", startingCell);
-    console.log("startingCell content", sheet[startingCell].v, typeof sheet[startingCell].v);
+    const startingCellContent = sheet[startingCell].v;
+    console.log("startingCell content", startingCellContent, typeof startingCellContent);
 
     const maxRowIndex = rowIndexForCompletedYears0 + 99;
 
     // odds to be alive
     var survivalChance = [];
     survivalChance[currentAgeInYears] = 1;
+
+    // odds to die this year
+    var deathChance = [];
+    deathChance[currentAgeInYears] = startingCellContent;
 
     console.log(survivalChance);
     for(var thisRowIndex = startRowIndex + 1; thisRowIndex <= maxRowIndex; thisRowIndex++) {
@@ -71,14 +76,19 @@ function calculate() {
 //        console.log("lastYearsOdds", lastYearsOdds);
 
         const thisCellAddress = XLSX.utils.encode_cell({c: columnIndexForMyBirthYear, r: thisRowIndex});
-//        console.log("thisCellAddress", thisCellAddress)
-        const thisYearsOdds = lastYearsOdds * (1 - sheet[thisCellAddress].v);
-//        console.log("thisYearsOdds", thisYearsOdds)
+//        console.log("thisCellAddress", thisCellAddress);
+        const thisYearsMortality = sheet[thisCellAddress].v;
+//        console.log("thisYearsMortality", thisYearsMortality);
+        const thisYearsSurvivalOdds = lastYearsOdds * (1 - thisYearsMortality);
+//        console.log("thisYearsSurvivalOdds", thisYearsSurvivalOdds);
+        const thisYearsDeathOdds = thisYearsSurvivalOdds * thisYearsMortality;
+//        console.log("thisYearsDeathOdds", thisYearsDeathOdds);
 
-        survivalChance[thisYearsAge] = thisYearsOdds;
+        survivalChance[thisYearsAge] = thisYearsSurvivalOdds;
+        deathChance[thisYearsAge] = thisYearsDeathOdds;
     }
 
-    createSurvivalGraph(survivalChance);
+    createSurvivalGraph(survivalChance, deathChance);
     document.getElementById("calculate").removeAttribute("disabled");
 }
 
@@ -89,42 +99,66 @@ function onSpreadsheetDownloaded(response) {
     document.getElementById("calculate").removeAttribute("disabled");
 }
 
-function createSurvivalGraph(survivalChance) {
+function createSurvivalGraph(survivalChance, deathChance) {
     console.log(`creating survival graph`);
     const ctx = document.getElementById('survivalGraph');
 
     const labels = [];
-    const data = [];
+    const survivalData = [];
+    const deathData = [];
 
     survivalChance.forEach(function(e, i) {
         labels.push(i);
-        data.push(e * 100);
+        survivalData.push(e * 100);
+        deathData.push(deathChance[i] * 100);
     });
 
     console.log("survivalChance", survivalChance);
     console.log("labels", labels);
-    console.log("data", data);
+    console.log("survivalData", survivalData);
+    console.log("deathData", deathData);
 
     if(window.chart) window.chart.destroy();
     window.chart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: labels,
-          datasets: [{
-            label: 'Chance of survival in %',
-            data: data,
-            borderWidth: 1
-          }]
+            labels: labels,
+            datasets: [{
+                    label: 'Wahrscheinlichkeit in %, in diesem Alter noch zu leben',
+                    data: survivalData,
+                    borderColor: 'blue',
+                    backgroundColor: 'blue',
+                    borderWidth: 1,
+                    yAxisID: "ySurvival",
+                },
+                {
+                    label: 'Wahrscheinlichkeit in %, in diesem Alter zu sterben',
+                    data: deathData,
+                    borderColor: 'red',
+                    backgroundColor: 'red',
+                    borderWidth: 1,
+                    yAxisID: "yDeath",
+                }]
         },
         options: {
           scales: {
-            y: {
-              beginAtZero: true
+            ySurvival: {
+              beginAtZero: true,
+              ticks: {color: 'blue'},
+              id: "ySurvival",
+            },
+            yDeath: {
+              beginAtZero: true,
+              id: "yDeath",
+              position: "right",
+              ticks: {color: 'red'},
+              grid: {
+                drawOnChartArea: false, // only want the grid lines for one axis to show up
+              },
             }
           }
         }
     });
-
 }
 
 function downloadSpreadsheet() {
@@ -142,5 +176,6 @@ function downloadSpreadsheet() {
     req.send();
 }
 
+document.getElementById("calculate").setAttribute("disabled", "disabled");
 document.getElementById("calculate").addEventListener("click", function() {calculate()});
 downloadSpreadsheet();

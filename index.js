@@ -63,6 +63,8 @@ function calculate() {
     var deathChance = [];
     deathChance[currentAgeInYears] = startingCellContent;
 
+    var lifeExpectancy = 0;
+
     console.log(survivalChance);
     for(var thisRowIndex = startRowIndex + 1; thisRowIndex <= maxRowIndex; thisRowIndex++) {
 //        console.log("thisRowIndex", thisRowIndex);
@@ -86,9 +88,14 @@ function calculate() {
 
         survivalChance[thisYearsAge] = thisYearsSurvivalOdds;
         deathChance[thisYearsAge] = thisYearsDeathOdds;
+        lifeExpectancy += thisYearsDeathOdds * thisYearsAge;
     }
 
-    createSurvivalGraph(survivalChance, deathChance);
+    // all years above 100 are "compressed" into 100
+    // so real life expectancy is higher
+    lifeExpectancy += survivalChance[99] * 100;
+
+    createSurvivalGraph(survivalChance, deathChance, lifeExpectancy);
     document.getElementById("calculate").removeAttribute("disabled");
 }
 
@@ -99,7 +106,7 @@ function onSpreadsheetDownloaded(response) {
     document.getElementById("calculate").removeAttribute("disabled");
 }
 
-function createSurvivalGraph(survivalChance, deathChance) {
+function createSurvivalGraph(survivalChance, deathChance, lifeExpectancy) {
     console.log(`creating survival graph`);
     const ctx = document.getElementById('survivalGraph');
 
@@ -117,47 +124,66 @@ function createSurvivalGraph(survivalChance, deathChance) {
     console.log("labels", labels);
     console.log("survivalData", survivalData);
     console.log("deathData", deathData);
+    console.log("lifeExpectancy", lifeExpectancy);
 
     if(window.chart) window.chart.destroy();
     window.chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                    label: 'Wahrscheinlichkeit in %, in diesem Alter noch zu leben',
-                    data: survivalData,
-                    borderColor: 'blue',
-                    backgroundColor: 'blue',
-                    borderWidth: 1,
-                    yAxisID: "ySurvival",
-                },
-                {
-                    label: 'Wahrscheinlichkeit in %, in diesem Alter zu sterben',
-                    data: deathData,
-                    borderColor: 'red',
-                    backgroundColor: 'red',
-                    borderWidth: 1,
-                    yAxisID: "yDeath",
-                }]
-        },
-        options: {
-          scales: {
-            ySurvival: {
-              beginAtZero: true,
-              ticks: {color: 'blue'},
-              id: "ySurvival",
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+            label: 'Wahrscheinlichkeit in %, in diesem Alter noch zu leben',
+            data: survivalData,
+            borderColor: 'blue',
+            backgroundColor: 'blue',
+            borderWidth: 1,
+            yAxisID: "ySurvival",
+          }, {
+            label: 'Wahrscheinlichkeit in %, in diesem Alter zu sterben',
+            data: deathData,
+            borderColor: 'red',
+            backgroundColor: 'red',
+            borderWidth: 1,
+            yAxisID: "yDeath",
+        }]
+      },
+      options: {
+        scales: {
+          ySurvival: {
+            beginAtZero: true,
+            ticks: {color: 'blue'},
+            id: "ySurvival",
+          },
+          yDeath: {
+            beginAtZero: true,
+            id: "yDeath",
+            position: "right",
+            ticks: {color: 'red'},
+            grid: {
+              drawOnChartArea: false, // only want the grid lines for one axis to show up
             },
-            yDeath: {
-              beginAtZero: true,
-              id: "yDeath",
-              position: "right",
-              ticks: {color: 'red'},
-              grid: {
-                drawOnChartArea: false, // only want the grid lines for one axis to show up
-              },
+          }
+        },
+        plugins: {
+          annotation: {
+            annotations: {
+              line1: {
+                type: 'line',
+                scaleId: 'ySurvival',
+                xMin: lifeExpectancy - labels[0],
+                xMax: lifeExpectancy - labels[0],
+                yMin: 0,
+                yMax: 100,
+                borderWidth: 2,
+                label: {
+                  display: true,
+                  content: `Lebenserwartung: ${lifeExpectancy.toFixed(1)} Jahre`,
+                }
+              }
             }
           }
         }
+      }
     });
 }
 
